@@ -1,15 +1,18 @@
 // Get the canvas and drawing context
 let canvas = document.getElementById("gameCanvas");
 let pencil = canvas.getContext("2d");
-
-// Disable image smoothing for pixelated sprites
 pencil.imageSmoothingEnabled = false;
 
-// Grab background image
 let background = document.getElementById("background");
-
-// Item sprite
 let itemSprite = document.getElementById("coin");
+
+// Score variables
+let neuroScore = 0;
+let evilScore = 0;
+const winningScore = 10; // You set the minimum points to reach
+
+const neuroScoreDiv = document.getElementById("neuroScoreDisplay");
+const evilScoreDiv = document.getElementById("evilScoreDisplay");
 
 // -----------------------------------------------
 // Character objects with sprite arrays for walking animation
@@ -27,7 +30,6 @@ let neuro = {
         left: "a",
         right: "d"
     },
-    // Sprite arrays for walking animation
     spritesUp: [
         document.getElementById("neuro_up_1"),
         document.getElementById("neuro_up_2"),
@@ -51,7 +53,7 @@ let neuro = {
     frameIndex: 0,
     frameTimer: 0,
     frameInterval: 10,
-    facingDirection: "down" // default
+    facingDirection: "down"
 };
 
 // Player 2: Evil
@@ -97,21 +99,17 @@ let evil = {
 function initCharacterAnimation(character) {
     character.frameIndex = 0;
     character.frameTimer = 0;
-    character.facingDirection = "down"; // default
+    character.facingDirection = "down";
 }
 initCharacterAnimation(neuro);
 initCharacterAnimation(evil);
 
 // Track pressed keys
 let keysPressed = {};
-window.addEventListener("keydown", function(e) {
-    keysPressed[e.key] = true;
-});
-window.addEventListener("keyup", function(e) {
-    keysPressed[e.key] = false;
-});
+window.addEventListener("keydown", e => { keysPressed[e.key] = true; });
+window.addEventListener("keyup", e => { keysPressed[e.key] = false; });
 
-// Utility to get the current sprite based on direction and animation frame
+// Utility to get current sprite based on direction
 function getCurrentSprite(character) {
     let spritesArray;
     switch (character.facingDirection) {
@@ -119,37 +117,30 @@ function getCurrentSprite(character) {
         case "down": spritesArray = character.spritesDown; break;
         case "left": spritesArray = character.spritesLeft; break;
         case "right": spritesArray = character.spritesRight; break;
-        default: spritesArray = [character.spritesDown[0]]; // fallback
+        default: spritesArray = [character.spritesDown[0]];
     }
     return spritesArray[character.frameIndex];
 }
 
-// Update character movement, animation, including diagonal movement
+// Update movement and animation, including diagonal movement
 function updateCharacter(character, controls) {
-    let moveX = 0;
-    let moveY = 0;
-
+    let moveX = 0, moveY = 0;
     if (keysPressed[controls.up]) moveY -= 1;
     if (keysPressed[controls.down]) moveY += 1;
     if (keysPressed[controls.left]) moveX -= 1;
     if (keysPressed[controls.right]) moveX += 1;
 
     if (moveX !== 0 || moveY !== 0) {
-        // Normalize for consistent speed in diagonal
-        const mag = Math.sqrt(moveX * moveX + moveY * moveY);
+        const mag = Math.sqrt(moveX*moveX + moveY*moveY);
         moveX /= mag;
         moveY /= mag;
 
-        // Move position
         character.x += moveX * 5;
         character.y += moveY * 5;
 
-        // Set facing direction based on dominant movement axis
         if (Math.abs(moveX) > Math.abs(moveY)) {
-            // Horizontal dominant
             character.facingDirection = moveX > 0 ? "right" : "left";
         } else {
-            // Vertical dominant
             character.facingDirection = moveY > 0 ? "down" : "up";
         }
 
@@ -161,12 +152,11 @@ function updateCharacter(character, controls) {
             character.frameIndex = (character.frameIndex + 1) % spritesArray.length;
         }
     } else {
-        // Not moving, reset to first frame
+        // Not moving
         character.frameIndex = 0;
     }
 }
 
-// Helper to get sprites array based on facing direction
 function getSpritesArray(character) {
     switch (character.facingDirection) {
         case "up": return character.spritesUp;
@@ -177,15 +167,14 @@ function getSpritesArray(character) {
     }
 }
 
-// Draw character scaled to 40x60
 function drawCharacter(character) {
-    let sprite = getCurrentSprite(character);
+    const sprite = getCurrentSprite(character);
     if (sprite) {
         pencil.drawImage(sprite, character.x, character.y, 40, 60);
     }
 }
 
-// Initialize item position
+// Initialize item
 let item = {
     x: 0,
     y: 0,
@@ -196,32 +185,111 @@ let item = {
         pencil.drawImage(this.sprite, this.x, this.y, this.width, this.height);
     }
 };
-function repositionItem() {
-    item.x = Math.random() * (canvas.width - item.width);
-    item.y = Math.random() * (canvas.height - item.height);
-}
-repositionItem();
 
-// Utility to get distance
+// Utility: get distance
 function getDistance(a, b) {
-    let dx = (a.x + a.width/2) - (b.x + b.width/2);
-    let dy = (a.y + a.height/2) - (b.y + b.height/2);
+    const dx = (a.x + a.width/2) - (b.x + b.width/2);
+    const dy = (a.y + a.height/2) - (b.y + b.height/2);
     return Math.sqrt(dx*dx + dy*dy);
 }
 
+// Reposition item avoiding players
+function repositionItem(avoidCharacters) {
+    let validPos = false;
+    let newX, newY;
+    while (!validPos) {
+        newX = Math.random() * (canvas.width - item.width);
+        newY = Math.random() * (canvas.height - item.height);
+        validPos = true;
+        for (let c of avoidCharacters) {
+            if (getDistance({x: newX, y: newY, width: item.width, height: item.height}, c) < 50) {
+                validPos = false;
+                break;
+            }
+        }
+    }
+    item.x = newX;
+    item.y = newY;
+}
+
+// Check if a character collected the item
 function checkCollection(character) {
     if (getDistance(character, item) < 30) {
-        repositionItem();
+        if (character === neuro) {
+            neuroScore++;
+            neuroScoreDiv.innerHTML = `Neuro: ${neuroScore}`;
+        } else if (character === evil) {
+            evilScore++;
+            evilScoreDiv.innerHTML = `Evil: ${evilScore}`;
+        }
+        repositionItem([neuro, evil]);
+        checkWin();
     }
 }
 
+// Check for game end
+function checkWin() {
+    if (neuroScore >= 10 && (neuroScore - evilScore) >= 2) {
+        showWinScreen(
+            "Neuro Wins!", 
+            "images/happy_neuro.png",
+        );
+    } else if (evilScore >= 10 && (evilScore - neuroScore) >= 2) {
+        showWinScreen(
+            "Evil Wins!", 
+            "images/happy_evil.png",
+        );
+    }
+}
+
+// Show win overlay
+function showWinScreen(text, winnerImgSrc, loserImgSrc) {
+    clearInterval(gameInterval);
+    const overlay = document.createElement("div");
+    overlay.id = "winOverlay";
+    overlay.style.position = "fixed";
+    overlay.style.top = 0;
+    overlay.style.left = 0;
+    overlay.style.width = "100%";
+    overlay.style.height = "100%";
+    overlay.style.backgroundColor = "rgba(0,0,0,0.8)";
+    overlay.style.display = "flex";
+    overlay.style.flexDirection = "column";
+    overlay.style.alignItems = "center";
+    overlay.style.justifyContent = "center";
+    overlay.style.zIndex = 9999;
+
+    const msg = document.createElement("h1");
+    msg.innerText = text;
+    msg.style.color = "white";
+
+    const winnerImg = document.createElement("img");
+    winnerImg.src = winnerImgSrc;
+    winnerImg.style.width = "300px";
+
+    const restartBtn = document.createElement("button");
+    restartBtn.innerText = "Play Again";
+    restartBtn.onclick = () => {
+        document.body.removeChild(overlay);
+        location.reload();
+    };
+
+    overlay.appendChild(msg);
+    overlay.appendChild(winnerImg);
+    overlay.appendChild(restartBtn);
+    document.body.appendChild(overlay);
+}
+
+// Initialize item position avoiding players
+repositionItem([neuro, evil]);
+
 // Main game loop
-function gameLoop() {
+let gameInterval = setInterval(() => {
     // Clear and draw background
     pencil.clearRect(0, 0, canvas.width, canvas.height);
     pencil.drawImage(background, 0, 0, canvas.width, canvas.height);
 
-    // Update movement & animation
+    // Update characters
     updateCharacter(neuro, neuro.controls);
     updateCharacter(evil, evil.controls);
 
@@ -232,10 +300,7 @@ function gameLoop() {
     // Draw item
     item.draw();
 
-    // Check collection
+    // Check for collection
     checkCollection(neuro);
     checkCollection(evil);
-}
-
-// Run the game
-setInterval(gameLoop, 50);
+}, 50);
