@@ -4,7 +4,7 @@ let pencil = canvas.getContext("2d");
 pencil.imageSmoothingEnabled = false;
 
 let background = document.getElementById("background");
-let itemSprite = document.getElementById("coin");
+let itemSprite = document.getElementById("osu");
 
 // Score variables
 let neuroScore = 0;
@@ -19,8 +19,8 @@ const evilScoreDiv = document.getElementById("evilScoreDisplay");
 
 // Player 1: Neuro
 let neuro = {
-    x: 50,
-    y: 50,
+    x: 100,
+    y: 250,
     width: 40,
     height: 60,
     spriteFacing: null,
@@ -44,22 +44,26 @@ let neuro = {
     ],
     spritesLeft: [
         document.getElementById("neuro_left_1"),
-        document.getElementById("neuro_left_2")
+        document.getElementById("neuro_left_2"),
+        document.getElementById("neuro_left_1"), // this fixes the issue I had where they disapeared
+        document.getElementById("neuro_left_2")  // making this aimation 4 frames instead of 2
     ],
     spritesRight: [
+        document.getElementById("neuro_right_1"), 
+        document.getElementById("neuro_right_2"),
         document.getElementById("neuro_right_1"),
         document.getElementById("neuro_right_2")
     ],
     frameIndex: 0,
     frameTimer: 0,
-    frameInterval: 10,
+    frameInterval: 4,
     facingDirection: "down"
 };
 
 // Player 2: Evil
 let evil = {
-    x: 200,
-    y: 200,
+    x: 450,
+    y: 50,
     width: 40,
     height: 60,
     spriteFacing: null,
@@ -83,15 +87,19 @@ let evil = {
     ],
     spritesLeft: [
         document.getElementById("evil_left_1"),
+        document.getElementById("evil_left_2"),
+        document.getElementById("evil_left_1"),
         document.getElementById("evil_left_2")
     ],
     spritesRight: [
+        document.getElementById("evil_right_1"),
+        document.getElementById("evil_right_2"),
         document.getElementById("evil_right_1"),
         document.getElementById("evil_right_2")
     ],
     frameIndex: 0,
     frameTimer: 0,
-    frameInterval: 10,
+    frameInterval: 4,
     facingDirection: "down"
 };
 
@@ -232,40 +240,32 @@ function checkWin() {
     if (neuroScore >= 10 && (neuroScore - evilScore) >= 2) {
         showWinScreen(
             "Neuro Wins!", 
-            "images/happy_neuro.png",
+            "images/neuro/neuro_happy.png"
         );
     } else if (evilScore >= 10 && (evilScore - neuroScore) >= 2) {
         showWinScreen(
             "Evil Wins!", 
-            "images/happy_evil.png",
+            "images/evil/evil_happy.png"
         );
     }
 }
 
-// Show win overlay
+// Show win overlay - note: styles removed
 function showWinScreen(text, winnerImgSrc, loserImgSrc) {
     clearInterval(gameInterval);
     const overlay = document.createElement("div");
     overlay.id = "winOverlay";
-    overlay.style.position = "fixed";
-    overlay.style.top = 0;
-    overlay.style.left = 0;
-    overlay.style.width = "100%";
-    overlay.style.height = "100%";
-    overlay.style.backgroundColor = "rgba(0,0,0,0.8)";
-    overlay.style.display = "flex";
-    overlay.style.flexDirection = "column";
-    overlay.style.alignItems = "center";
-    overlay.style.justifyContent = "center";
-    overlay.style.zIndex = 9999;
 
     const msg = document.createElement("h1");
     msg.innerText = text;
-    msg.style.color = "white";
 
     const winnerImg = document.createElement("img");
     winnerImg.src = winnerImgSrc;
-    winnerImg.style.width = "300px";
+    // Set explicit size to scale up (adjust as needed)
+    winnerImg.width = 200; // example: 20 * 4
+    winnerImg.height = 300; // example: 30 * 4
+    // Apply pixelated rendering
+    winnerImg.style.imageRendering = "pixelated";
 
     const restartBtn = document.createElement("button");
     restartBtn.innerText = "Play Again";
